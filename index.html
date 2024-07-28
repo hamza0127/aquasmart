@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Insect Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        #webcam-container {
+            margin: 20px auto;
+            width: 400px;
+            height: 400px;
+            border: 2px solid #ccc;
+            background-color: #fff;
+        }
+        #label-container {
+            margin: 20px auto;
+            font-size: 24px;
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <button type="button" onclick="init()">Start</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        // URL du modèle Teachable Machine
+        const URL = "https://teachablemachine.withgoogle.com/models/riatM-NAT/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        // Variables pour stocker les valeurs spécifiques
+        let insectValue = "";
+
+        // Fonction d'initialisation
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            // Charger le modèle et les métadonnées
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // Configurer la webcam
+            const flip = true; // Inverser l'image de la webcam pour une vue miroir
+            webcam = new tmImage.Webcam(400, 400, flip); // largeur, hauteur, inversion
+            await webcam.setup(); // Demander l'accès à la webcam
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            // Ajouter la webcam à la page
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+            // Préparer le conteneur des étiquettes
+            labelContainer = document.getElementById("label-container");
+            labelContainer.appendChild(document.createElement("div"));
+        }
+
+        // Boucle principale
+        async function loop() {
+            webcam.update(); // Mettre à jour l'image de la webcam
+            await predict(); // Faire une prédiction
+            window.requestAnimationFrame(loop); // Continuer la boucle
+        }
+
+        // Fonction de prédiction
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let highestPrediction = { className: "", probability: 0 };
+
+            // Trouver la prédiction avec la probabilité la plus élevée
+            for (let i = 0; i < maxPredictions; i++) {
+                if (prediction[i].probability > highestPrediction.probability) {
+                    highestPrediction = prediction[i];
+                }
+            }
+
+            // Afficher le résultat selon la prédiction
+            let classPrediction = highestPrediction.className;
+            let displayMessage = "";
+
+            if (classPrediction.toLowerCase() === "fourmi") {
+                insectValue = "café ou citron";
+                displayMessage = "Insecte détecté : Fourmi. Solution recommandée : café ou citron.";
+            } else if (classPrediction.toLowerCase() === "jrada") {
+                insectValue = "fipronil";
+                displayMessage = "Insecte détecté : Jrada. Solution recommandée : fipronil.";
+            } else {
+                insectValue = "Insecte non reconnu.";
+                displayMessage = "Insecte non reconnu. Aucune solution recommandée.";
+            }
+
+            // Afficher le message explicatif
+            labelContainer.childNodes[0].innerHTML = displayMessage;
+        }
+    </script>
+</body>
+</html>
